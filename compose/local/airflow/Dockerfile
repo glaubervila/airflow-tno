@@ -19,7 +19,7 @@ RUN bash -c "pip install -r /tmp/requirements/${BUILD_ENVIRONMENT}.txt"
 
 ENV PYTHONPATH="/opt/airflow:$PYTHONPATH"
 
-RUN mkdir -pv "${AIRFLOW_HOME}/include" \
-    && chown -R airflow:0 "${AIRFLOW_HOME}/include" \
-    && chmod -R g+rw "${AIRFLOW_HOME}/include" 
+RUN mkdir -pv "${AIRFLOW_HOME}/include" "${HOME}/workspaces" \
+    && chown -R airflow:0 "${AIRFLOW_HOME}/include" "${HOME}/workspaces" \
+    && chmod -R g+rw "${AIRFLOW_HOME}/include" "${HOME}/workspaces"
 

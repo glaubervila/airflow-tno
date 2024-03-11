@@ -16,11 +16,19 @@
 
 	// The optional 'workspaceFolder' property is the path VS Code should open by default when
 	// connected. This is typically a file mount in .devcontainer/docker-compose.yml
-	// "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}"
-	"workspaceFolder": "/opt/airflow",
+	"workspaceFolder": "/home/airflow/workspaces/${localWorkspaceFolderBasename}",
+	// "workspaceFolder": "/opt/airflow",
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
+	"features": {
+        // "ghcr.io/devcontainers/features/common-utils:2.4.2": {
+        //     "username": "none",
+        //     "configureZshAsDefaultShell": true
+        // },
+        // "ghcr.io/devcontainers-contrib/features/zsh-plugins:0": {},
+        // "ghcr.io/stuartleeks/dev-container-features/shell-history:0": {},
+        // "ghcr.io/devcontainers/features/github-cli:1": {}
+    },
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
@@ -38,10 +46,47 @@
 	"customizations": {
 		"vscode": {
             "settings": { 
-				"python.defaultInterpreterPath": "/home/airflow/.local/lib/python3.8/site-packages/"
-				// "python.defaultInterpreterPath": "/usr/local/bin/python"
+				"editor.formatOnSave": true,
+				"[python]": {
+                    "analysis.autoImportCompletions": true,
+                    "analysis.typeCheckingMode": "basic",
+                    "defaultInterpreterPath": "/home/airflow/.local/lib/python3.8/site-packages/",
+                    "editor.codeActionsOnSave": {
+                        "source.organizeImports": "always"
+                    },
+                    // Uncomment when fixed
+                    // https://github.com/microsoft/vscode-remote-release/issues/8474
+                    // "editor.defaultFormatter": "ms-python.black-formatter",
+                    "formatting.blackPath": "/usr/local/bin/black",
+                    "formatting.provider": "black",
+                    "languageServer": "Pylance",
+                    // "linting.banditPath": "/usr/local/py-utils/bin/bandit",
+                    "linting.enabled": true,
+                    "linting.flake8Enabled": true,
+                    "linting.flake8Path": "/usr/local/bin/flake8",
+                    "linting.mypyEnabled": true,
+                    "linting.mypyPath": "/usr/local/bin/mypy",
+                    "linting.pycodestylePath": "/usr/local/bin/pycodestyle",
+                    // "linting.pydocstylePath": "/usr/local/py-utils/bin/pydocstyle",
+                    "linting.pylintEnabled": true,
+                    "linting.pylintPath": "/usr/local/bin/pylint"
+                }
             },
-            "extensions": ["ms-python.python"]
+            // https://code.visualstudio.com/docs/remote/devcontainerjson-reference#_vs-code-specific-properties
+            // Add the IDs of extensions you want installed when the container is created.
+            "extensions": [
+                "davidanson.vscode-markdownlint",
+                "mrmlnc.vscode-duplicate",
+                "visualstudioexptteam.vscodeintellicode",
+                "visualstudioexptteam.intellicode-api-usage-examples",
+                // python
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "ms-python.isort",
+                "ms-python.black-formatter",
+                // django
+                "batisteo.vscode-django"
+            ]
         }
 	},
 

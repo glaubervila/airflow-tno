@@ -1,5 +1,7 @@
 # Airflow Devcontainer
 
+<!-- Configurar os lints baseado no repositorio do airflow -->
+<!-- https://github.com/apache/airflow/blob/main/.gitignore -->
 
 https://airflow.apache.org/docs/apache-airflow/stable/howto/docker-compose/index.html
 

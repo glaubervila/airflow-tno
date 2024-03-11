@@ -1,22 +1,31 @@
 import sys
+
 sys.path.append("/opt/airflow")
-from airflow.models import DAG
-from airflow.decorators import dag, task
+import json
+import logging
+import time
+from datetime import datetime
+from pathlib import Path
+
 # from airflow.operators.python import PythonOperator
 from pprint import pprint
-import pendulum
-import logging
-import requests
 from urllib.parse import urljoin
-from pathlib import Path
-import json
-import time
+
 import pandas as pd
+import pendulum
+import requests
+from airflow.decorators import dag, task
+from airflow.models import DAG
+
+from include.operators.exposure_operator import ExposureOperator
+
 # from operators.skybot_operator import SkybotOperator
 
-base_path = Path("/opt/airflow/data/skybot")
-database_path = Path("/opt/airflow/data/skybot/database")
+# https://docs.astronomer.io/learn/dag-best-practices?tab=good-practice#avoid-top-level-code-in-your-dag-file
 
+
+base_path = Path(f"/opt/airflow/data/skybot")
+database_path = Path("/opt/airflow/data/skybot/des_database")
 # Radius usado na query do skybot com tamanho suficiente para a exposição do des.
 # Cone search radius in Degres
 radius = 1.2
@@ -35,41 +44,50 @@ position_error = 0
 )
 def des_skybot_tno_etl():
     """DES x Skybot ETL for Solar System Portal"""
-   
-    # Prepare 
+
+    # Prepare
     # ------------------------------------------------
-    @task()
-    def prepare(**kwargs) -> list:
-        """Criar pastas
-        Verificar se os arquivos estao disponiveis.
-        Ler os arquivos/Converter
-        """
-        # Create Job path
-        job_path = base_path.joinpath(f"{{ ds_nodash }}")
-        job_path.mkdir(parents=True, exist_ok=True)
 
-        # https://pythonspeed.com/articles/pandas-read-csv-fast/
-        # https://saturncloud.io/blog/how-to-efficiently-read-large-csv-files-in-python-pandas/#:~:text=Use%20Chunking,into%20memory%20at%20a%20time.
-        exposures_csv = database_path.joinpath("exposures.csv")
-        # exposures_pq = database_path.joinpath("exposures.parquet")
-        df = pd.read_csv(exposures_csv, nrows=2, delimiter='|', usecols=["id", "date_obs", "radeg", "decdeg", "exptime"])
-               
-        # TODO: Aplicar correção na date_obs
-        df["date_with_correction"] =  df['date_obs']
+    # https://docs.astronomer.io/learn/airflow-importing-custom-hooks-operators
+    prepare = ExposureOperator(
+        base_path=base_path,
+        database_path=database_path,
+        task_id="prepare_exposures",
+    )
 
-        exposures = df.to_dict(orient='records')
+    # @task()
+    # def prepare(**kwargs) -> list:
+    #     """Criar pastas
+    #     Verificar se os arquivos estao disponiveis.
+    #     Ler os arquivos/Converter
+    #     """
+    #     # Create Job path
+    #     job_path = base_path.joinpath(str(datetime.now().date()))
+    #     job_path.mkdir(parents=True, exist_ok=True)
+    #     logging.info(f"JOB_PAHT: {job_path}")
+    #     # https://pythonspeed.com/articles/pandas-read-csv-fast/
+    #     # https://saturncloud.io/blog/how-to-efficiently-read-large-csv-files-in-python-pandas/#:~:text=Use%20Chunking,into%20memory%20at%20a%20time.
+    #     exposures_csv = database_path.joinpath("exposures.csv")
+    #     # # exposures_pq = database_path.joinpath("exposures.parquet")
+    #     df = pd.read_csv(
+    #         exposures_csv, nrows=2, delimiter="|", usecols=["id", "date_obs", "radeg", "decdeg", "exptime"]
+    #     )
 
-        logging.info(f"Exposures: {len(exposures)}")
-        logging.debug(list(exposures))
+    #     # # TODO: Aplicar correção na date_obs
+    #     df["date_with_correction"] = df["date_obs"]
 
-        return list(exposures)
+    #     exposures = df.to_dict(orient="records")
 
+    #     logging.info(f"Exposures: {len(exposures)}")
+    #     logging.debug(list(exposures))
+
+    #     return list(exposures)
 
     # skybot = SkybotOperator(
     #         task_id="skybot_cone_search",
     #         exposure_id="{{ ti.xcom_pull(task_ids='prepare', key='id') }}",
     #         date="{{ ti.xcom_pull(task_ids='prepare', key='date_with_correction') }}",
-    #         ra=0, 
+    #         ra=0,
     #         dec=0,
     #         radius=radius,
     #         observer_location=observer_location,
@@ -81,22 +99,22 @@ def des_skybot_tno_etl():
     @task()
     def extract(exposure: dict) -> int:
         """Para cada exposure:
-          agrupar os ccds. 
-          fazer a consulta no Skybot
-          gerar arquivo com o retor no skybot.
-        
+        agrupar os ccds.
+        fazer a consulta no Skybot
+        gerar arquivo com o retor no skybot.
+
         """
         # logging.info(exposure)
         # to = SkybotOperator(
         #     exposure_id=exposure['id'],
         #     date=exposure['date_with_correction'],
-        #     ra=exposure['radeg'], 
+        #     ra=exposure['radeg'],
         #     dec=exposure['decdeg'],
         #     radius=radius,
         #     observer_location=observer_location,
         #     position_error=position_error,
         #     output_path = Path(f"data/skybot/{{ ds_nodash }}/cone_search_outputs"))
-        return exposure['id']
+        return exposure["id"]
 
     # Transform
     # ------------------------------------------------
@@ -112,36 +130,31 @@ def des_skybot_tno_etl():
         logging.info(f"Load Task!")
         logging.info(f"Count IDS: {len(ids)}")
 
-
     # Clean
     # ------------------------------------------------
     @task()
     def clean() -> None:
         logging.info(f"Clean Taks!")
 
-    
     # Pipeline
     # ------------------------------------------------
     # exposures = prepare()
     # https://github.com/apache/airflow/discussions/30785
-    # ids = extract.expand(exposure=prepare()) 
+    # ids = extract.expand(exposure=prepare())
     # new_ids = transform.expand(id=ids)
     # load(new_ids) >> clean()
-       
 
-
-
-
-    # TEST WITH CUSTON OPERATOR
-    # https://docs.astronomer.io/learn/airflow-importing-custom-hooks-operators
-    exposures = prepare() 
-    # ids = extract.expand(exposure=prepare()) 
-
+    # ids = extract.expand(exposure=prepare())
 
     # df = pd.read_parquet(paths["exposures_file"], engine="fastparquet")
     # df = pd.read_parquet(paths["exposures_file"])
     # print(df.head())
 
     # extract(paths) >> transform() >> load() >> clean()
+
+    # TEST WITH CUSTON OPERATOR
+    # https://docs.astronomer.io/learn/airflow-importing-custom-hooks-operators
+    exposures = prepare
+
 
 des_skybot_tno_etl()
